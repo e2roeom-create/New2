@@ -1,0 +1,281 @@
+<title>เครื่องคิดค่าบริการอุปกรณ์ไฟฟ้า</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  /* Layout: ใบประเมินราคาแบบคอลัมน์เดียว รายการอุปกรณ์ด้านบน ค่าบริการตรงกลาง สรุปยอดเป็นแถบเข้มด้านล่าง */
+  :root {
+    --bg: #eceee9;
+    --surface: #ffffff;
+    --surface-2: #f4f5f1;
+    --ink: #1c2623;
+    --ink-soft: #5a6661;
+    --line: #d7dbd3;
+    --accent: #0f5c4d;
+    --accent-ink: #ffffff;
+    --signal: #b45309;
+    --danger: #b3261e;
+    --total-bg: #14201d;
+    --total-ink: #f1f4ef;
+    --total-soft: #9fb0a9;
+    --font-body: "IBM Plex Sans Thai", "Noto Sans Thai", system-ui, sans-serif;
+    --font-num: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #101614; --surface: #19211f; --surface-2: #212b28;
+      --ink: #e8ede9; --ink-soft: #94a39c; --line: #2f3b37;
+      --accent: #3fbf9f; --accent-ink: #0b1411; --signal: #f0a34b;
+      --danger: #ff8a80; --total-bg: #0a0f0e; --total-ink: #eef3ef; --total-soft: #86978f;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #101614; --surface: #19211f; --surface-2: #212b28;
+    --ink: #e8ede9; --ink-soft: #94a39c; --line: #2f3b37;
+    --accent: #3fbf9f; --accent-ink: #0b1411; --signal: #f0a34b;
+    --danger: #ff8a80; --total-bg: #0a0f0e; --total-ink: #eef3ef; --total-soft: #86978f;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: var(--font-body); font-size: 15px; line-height: 1.6;
+    padding-block: 24px 40px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .sheet { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  .num { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+
+  header { display: flex; flex-direction: column; gap: 4px; padding: 4px 2px 8px; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; color: var(--signal); font-weight: 600; text-transform: uppercase; }
+  h1 { margin: 0; font-size: 26px; line-height: 1.25; font-weight: 700; text-wrap: balance; }
+  header p { margin: 0; color: var(--ink-soft); font-size: 14px; }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .panel-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
+  .panel-head small { color: var(--ink-soft); font-size: 13px; }
+
+  .btn { font: inherit; font-weight: 600; font-size: 14px; border: 0; border-radius: 8px; padding: 9px 14px; cursor: pointer; background: var(--accent); color: var(--accent-ink); }
+  .btn:hover { filter: brightness(1.1); }
+  :is(.btn, .step button, .del, select, input[type=checkbox]):focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+  #rows { display: flex; flex-direction: column; gap: 10px; }
+  .row { background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 10px; }
+  .pick { display: flex; gap: 8px; align-items: center; }
+  select { flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 10px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+  .del { flex: none; width: 38px; height: 38px; border: 1px solid var(--line); background: var(--surface); color: var(--danger); border-radius: 8px; font-size: 20px; line-height: 1; cursor: pointer; }
+  .del:hover { border-color: var(--danger); }
+  .qtyline { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .qtyline .lbl { font-size: 13px; color: var(--ink-soft); }
+  .linetotal { font-size: 15px; font-weight: 600; margin-left: auto; }
+
+  .step { display: inline-flex; align-items: stretch; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--surface); }
+  .step button { width: 42px; border: 0; background: var(--surface-2); color: var(--ink); font: inherit; font-size: 18px; font-weight: 600; cursor: pointer; }
+  .step button:hover { background: var(--line); }
+  .step output { min-width: 46px; display: grid; place-items: center; font-weight: 600; padding: 6px 4px; }
+
+  .opt { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; }
+  .opt b { font-weight: 600; display: block; }
+  .opt small { color: var(--ink-soft); font-size: 13px; }
+  .opt > div { min-width: 0; }
+  input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--accent); flex: none; cursor: pointer; }
+
+  .summary { background: var(--total-bg); color: var(--total-ink); border-radius: 10px; padding: 18px 16px; display: flex; flex-direction: column; gap: 8px; }
+  .line { display: flex; justify-content: space-between; gap: 12px; color: var(--total-soft); font-size: 14px; }
+  .line span:last-child { color: var(--total-ink); white-space: nowrap; }
+  .line.sub { border-top: 1px solid rgba(255,255,255,.14); padding-top: 8px; margin-top: 2px; }
+  .grand { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,.14); padding-top: 12px; margin-top: 4px; }
+  .grand span:first-child { font-weight: 600; font-size: 15px; }
+  .grand .num { font-size: 28px; font-weight: 600; color: #ffd08a; }
+  .note { color: var(--ink-soft); font-size: 12.5px; text-align: center; }
+
+  @media (prefers-reduced-motion: no-preference) { .btn, .del, .step button { transition: background .15s, filter .15s, border-color .15s; } }
+</style>
+
+<div class="sheet">
+  <header>
+    <span class="eyebrow">ใบประเมินราคาหน้างาน</span>
+    <h1>คำนวณค่าบริการอุปกรณ์ไฟฟ้า</h1>
+    <p>เลือกอุปกรณ์ ปรับจำนวน เปิดปิดค่าปลดสับและ VAT แล้วดูยอดสุทธิได้ทันที</p>
+  </header>
+
+  <section class="panel" aria-labelledby="h-items">
+    <div class="panel-head">
+      <div>
+        <h2 id="h-items">รายการอุปกรณ์</h2>
+        <small>เพิ่มได้หลายรายการ</small>
+      </div>
+      <button type="button" class="btn" id="addBtn">+ เพิ่มอุปกรณ์</button>
+    </div>
+    <div id="rows"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="h-svc">
+    <h2 id="h-svc" style="margin:0;font-size:16px;font-weight:600">ค่าบริการ</h2>
+    <label class="opt" for="includeSwitching">
+      <div><b>ค่าปลดสับ</b><small>570 บาท ต่อครั้ง</small></div>
+      <input type="checkbox" id="includeSwitching" checked>
+    </label>
+    <div class="opt">
+      <div><b>ตรวจสอบแก้ไข</b><small>285 บาท ต่อหน่วย</small></div>
+      <div class="step" role="group" aria-label="จำนวนหน่วยตรวจสอบแก้ไข">
+        <button type="button" id="unitMinus" aria-label="ลดจำนวนหน่วย">−</button>
+        <output id="units" class="num">1</output>
+        <button type="button" id="unitPlus" aria-label="เพิ่มจำนวนหน่วย">+</button>
+      </div>
+    </div>
+    <label class="opt" for="includeVat">
+      <div><b>ภาษีมูลค่าเพิ่ม 7%</b><small>คิดจากยอดรวมก่อน VAT</small></div>
+      <input type="checkbox" id="includeVat" checked>
+    </label>
+  </section>
+
+  <section class="summary" aria-live="polite">
+    <div class="line"><span>ค่าอุปกรณ์รวม</span><span class="num" id="materialCost"></span></div>
+    <div class="line"><span>ค่าปลดสับ</span><span class="num" id="switchingCost"></span></div>
+    <div class="line"><span>ค่าตรวจสอบแก้ไข</span><span class="num" id="inspectionCost"></span></div>
+    <div class="line sub"><span>ยอดรวมก่อน VAT</span><span class="num" id="subTotalCost"></span></div>
+    <div class="line"><span>VAT 7%</span><span class="num" id="vatCost"></span></div>
+    <div class="grand"><span>ยอดรวมสุทธิทั้งสิ้น</span><span class="num" id="totalCost"></span></div>
+  </section>
+  <p class="note">แถวแรกเป็นรายการตัวอย่าง เปลี่ยนหรือลบได้</p>
+</div>
+
+<script>
+  const equipmentList = [
+    { name: "DROPOUT FUSE CUTOUT COVERS", price: 938 },
+    { name: "ฟิวส์ลิงค์ 22เควี 65 แอมป์", price: 286 },
+    { name: "ฟิวส์ลิงค์ 22เควี 40 แอมป์", price: 99 },
+    { name: "ฟิวส์ลิงค์ 22เควี 25 แอมป์", price: 89 },
+    { name: "ฟิวส์ลิงค์ 22เควี 15 แอมป์", price: 74 },
+    { name: "ฟิวส์ลิงค์ 22เควี 10 แอมป์", price: 81 },
+    { name: "ฟิวส์ลิงค์ 22เควี 8 แอมป์", price: 72 },
+    { name: "ฟิวส์ลิงค์ 22เควี 5-6 แอมป์", price: 73 },
+    { name: "ฟิวส์ลิงค์ 22เควี 3 แอมป์", price: 69 },
+    { name: "LT.ฟิวส์สวิต์แรงต่ำ 1x400 แอมป์", price: 868 },
+    { name: "เอชอาร์ซี ฟิวส์แรงต่ำ 400 แอมป์", price: 363 },
+    { name: "เอชอาร์ซี ฟิวส์แรงต่ำ 315 แอมป์", price: 283 },
+    { name: "เอชอาร์ซี ฟิวส์แรงต่ำ 250 แอมป์", price: 170 },
+    { name: "เอชอาร์ซี ฟิวส์แรงต่ำ 200 แอมป์", price: 161 },
+    { name: "เอชอาร์ซี ฟิวส์แรงต่ำ 150-160 แอมป์", price: 150 },
+    { name: "เอชอาร์ซี ฟิวส์แรงต่ำ 100 แอมป์", price: 138 },
+    { name: "เอชอาร์ซี ฟิวส์แรงต่ำ 80 แอมป์", price: 118 },
+    { name: "เอชอาร์ซี ฟิวส์แรงต่ำ 50 แอมป์", price: 99 },
+    { name: "กระบอกฟิวส์ 22K 100 A", price: 1260 },
+    { name: "ดรอฟเอาท์ฟิวส์ 22 เควี 100 แอมป์", price: 3702 },
+    { name: "ล่อฟ้า 20-21 เควี 5กิโลแอมป์", price: 1085 },
+    { name: "ลูกถ้วยแขวนแบบ ก(แบบ 521) มอก.354", price: 471 },
+    { name: "ลูกถ้วยไลน์โพสท์ไทพ์ 22 เควี", price: 1144 },
+    { name: "หางปลา เจาะรู 185 ต.มม.", price: 49 },
+    { name: "หางปลา 95 ต.มม.", price: 33 },
+    { name: "หางปลาสำหรับสายอลูมิเนียม 50 ต.มม.", price: 15 },
+    { name: "หลอดต่อสายชนิดบีบ 50/8 ต.มม.", price: 78 },
+    { name: "หลอดต่อสายชนิดบีบ รับแรงดึงสายอลูมิเนียม 185 ต.มม.", price: 89 },
+    { name: "หลอดต่อสายชนิดบีบ รับแรงดึงสายอลูมิเนียม 120 ต.มม.", price: 84 },
+    { name: "หลอดต่อสายชนิดบีบ รับแรงดึงสายอลูมิเนียม 95 ต.มม.", price: 39 },
+    { name: "หลอดต่อสายชนิดบีบ รับแรงดึงสายอลูมิเนียม 50 ต.มม.", price: 22 },
+    { name: "ฮอทไลน์แคล้มป์ 35-185 ต.มม.", price: 852 },
+    { name: "ฮอทไลน์แคล้มป์ 50-120 ต.มม.", price: 276 },
+    { name: "ฮอทไลน์แคล้มป์ 25-50 ต.มม.", price: 147 },
+    { name: "เบลแคล้มป์ฮ้อทไลน์ 70-185 ต.มม.", price: 1050 },
+    { name: "เบลแคล้มป์ฮ้อทไลน์ 35-70 ต.มม.", price: 910 },
+    { name: "พีจี คอนเน็คเตอร์ 3 สลัก 70 ต.มม.", price: 94 },
+    { name: "พีจี 25-95 ต.มม.", price: 28 },
+    { name: "ปรีฟอร์มเข้าปลายสาย SAC 22KV 185 ต.มม.", price: 192 },
+    { name: "ปรีฟอร์มเข้าปลายสาย PIC 120 ต.มม. และ SAC 50 ต.มม.", price: 110 },
+    { name: "เทปพันเคเบิ้ลอากาศแรงสูง ขนาด3/4x30 นิ้ว", price: 47 },
+    { name: "เทปไฟฟ้าพีวีซี.", price: 8 },
+    { name: "สายอลูมิเนียม 95 ต.มม.", price: 71 },
+    { name: "สายอลูมิเนียม 50 ต.มม.", price: 47 },
+    { name: "สาย SAC 185 ต.มม.", price: 227 },
+    { name: "สาย SAC 50 ต.มม.", price: 115 },
+    { name: "สายอลูมิเนียมแกนเหล็ก 50/8 ต.มม.", price: 35 },
+    { name: "สายอลูมิเนียมเปลือย 185 ต.มม.", price: 66 },
+    { name: "สายอลูมิเนียมเปลือย 120 ต.มม.", price: 27 },
+    { name: "สายอลูมิเนียมเปลือย 95 ต.มม.", price: 30 }
+  ];
+
+  const SWITCHING = 570, INSPECTION = 285, VAT = 0.07;
+  const fmt = n => n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const baht = n => fmt(n) + ' บาท';
+
+  // each row: { item: index into equipmentList or -1, qty }
+  let rows = [{ item: 2, qty: 2 }];
+  let units = 1;
+
+  const rowsEl = document.getElementById('rows');
+  const optionsHtml = '<option value="-1">เลือกอุปกรณ์ไฟฟ้า</option>' +
+    equipmentList.map((e, i) => `<option value="${i}">${e.name} (${e.price.toLocaleString('th-TH')} บาท)</option>`).join('');
+
+  function renderRows() {
+    rowsEl.innerHTML = '';
+    rows.forEach((r, idx) => {
+      const el = document.createElement('div');
+      el.className = 'row';
+      el.innerHTML = `
+        <div class="pick">
+          <select id="item-${idx}" aria-label="อุปกรณ์ลำดับที่ ${idx + 1}">${optionsHtml}</select>
+          <button type="button" class="del" aria-label="ลบรายการ" title="ลบรายการ">×</button>
+        </div>
+        <div class="qtyline">
+          <span class="lbl">จำนวนชิ้น</span>
+          <div class="step" role="group" aria-label="จำนวนชิ้น">
+            <button type="button" class="minus" aria-label="ลดจำนวน">−</button>
+            <output class="num qty">${r.qty}</output>
+            <button type="button" class="plus" aria-label="เพิ่มจำนวน">+</button>
+          </div>
+          <span class="linetotal num"></span>
+        </div>`;
+      const sel = el.querySelector('select');
+      sel.value = r.item;
+      sel.addEventListener('change', () => { r.item = parseInt(sel.value, 10); update(); });
+      el.querySelector('.minus').addEventListener('click', () => { r.qty = Math.max(1, r.qty - 1); update(); });
+      el.querySelector('.plus').addEventListener('click', () => { r.qty += 1; update(); });
+      el.querySelector('.del').addEventListener('click', () => {
+        if (rows.length > 1) rows.splice(idx, 1); else { r.item = -1; r.qty = 1; }
+        renderRows(); update();
+      });
+      rowsEl.appendChild(el);
+    });
+  }
+
+  function update() {
+    let material = 0;
+    [...rowsEl.children].forEach((el, idx) => {
+      const r = rows[idx];
+      const price = r.item >= 0 ? equipmentList[r.item].price : 0;
+      const line = price * r.qty;
+      material += line;
+      el.querySelector('.qty').textContent = r.qty;
+      el.querySelector('.linetotal').textContent = r.item >= 0 ? baht(line) : '';
+    });
+    const sw = document.getElementById('includeSwitching').checked ? SWITCHING : 0;
+    const insp = units * INSPECTION;
+    const sub = material + sw + insp;
+    const vat = document.getElementById('includeVat').checked ? Math.round(sub * VAT * 100) / 100 : 0;
+    document.getElementById('units').textContent = units;
+    document.getElementById('materialCost').textContent = baht(material);
+    document.getElementById('switchingCost').textContent = baht(sw);
+    document.getElementById('inspectionCost').textContent = baht(insp);
+    document.getElementById('subTotalCost').textContent = baht(sub);
+    document.getElementById('vatCost').textContent = baht(vat);
+    document.getElementById('totalCost').textContent = baht(sub + vat);
+  }
+
+  document.getElementById('addBtn').addEventListener('click', () => {
+    rows.push({ item: -1, qty: 1 }); renderRows(); update();
+    const last = rowsEl.lastElementChild; if (last) last.querySelector('select').focus();
+  });
+  document.getElementById('unitMinus').addEventListener('click', () => { units = Math.max(0, units - 1); update(); });
+  document.getElementById('unitPlus').addEventListener('click', () => { units += 1; update(); });
+  document.getElementById('includeSwitching').addEventListener('change', update);
+  document.getElementById('includeVat').addEventListener('change', update);
+
+  renderRows();
+  update();
+</script>
